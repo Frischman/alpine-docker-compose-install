@@ -62,11 +62,24 @@ echo "Starting Docker service..."
 rc-update add docker boot || { log_error "Failed to add Docker to boot."; exit 1; }
 rc-service docker start || { log_error "Failed to start Docker service."; exit 1; }
 
-# 检查 docker 是否启动成功，使用更可靠的方法
-if ! timeout 5 docker info > /dev/null 2>&1; then
-  log_error "Docker service failed to start within 5 seconds. Check logs with 'rc-status -a docker' or 'logread'."
-  exit 1
-fi
+# 检查 docker 是否启动成功，增加等待时间并在失败时重试
+RETRY_COUNT=5
+RETRY_DELAY=5
+
+for i in $(seq 1 $RETRY_COUNT); do
+  if docker info > /dev/null 2>&1; then
+    echo "Docker service started successfully."
+    break
+  else
+    echo "Waiting for Docker service to start... ($i/$RETRY_COUNT)"
+    sleep $RETRY_DELAY
+  fi
+
+  if [ $i -eq $RETRY_COUNT ]; then
+    log_error "Docker service failed to start after $((RETRY_COUNT * RETRY_DELAY)) seconds. Check logs with 'rc-status -a docker' or 'logread'."
+    exit 1
+  fi
+done
 
 echo "Downloading Docker Compose..."
 # 获取最新的 docker-compose 版本，并处理网络问题
