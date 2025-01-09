@@ -33,12 +33,6 @@ fi
 
 echo "Detected Alpine version: ${ALPINE_VERSION}"
 
-# 检查仓库文件是否存在，如果不存在则创建
-if [ ! -f /etc/apk/repositories ]; then
-  echo "Creating /etc/apk/repositories file..."
-  touch /etc/apk/repositories || { log_error "Failed to create /etc/apk/repositories"; exit 1; }
-fi
-
 # 添加 main 和 community 仓库，并处理重复添加的情况
 if ! grep -q "http://dl-cdn.alpinelinux.org/alpine/${ALPINE_VERSION}/main" /etc/apk/repositories; then
   echo "Adding main repository for Alpine ${ALPINE_VERSION}..."
