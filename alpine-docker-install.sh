@@ -6,6 +6,16 @@ log_error() {
   echo "Error: $*" >&2 # 将错误信息输出到 stderr
 }
 
+cleanup() {
+  echo "Cleaning up temporary files..."
+  rm -rf "$TEMP_DIR"
+}
+
+trap cleanup EXIT
+
+echo "Creating temporary directory..."
+TEMP_DIR=$(mktemp -d) || { log_error "Failed to create temporary directory."; exit 1; }
+
 echo "Updating apk repositories..."
 apk update || { log_error "Failed to update apk repositories."; exit 1; }
 
@@ -68,10 +78,13 @@ if [ -z "$COMPOSE_URL" ]; then
   exit 1
 fi
 
-curl -L "$COMPOSE_URL" -o /usr/local/bin/docker-compose || { log_error "Error downloading Docker Compose. Check your internet connection."; exit 1; }
+curl -L "$COMPOSE_URL" -o "$TEMP_DIR/docker-compose" || { log_error "Error downloading Docker Compose. Check your internet connection."; exit 1; }
 
 echo "Setting execute permissions for Docker Compose..."
-chmod +x /usr/local/bin/docker-compose || { log_error "Failed to set execute permissions for Docker Compose."; exit 1; }
+chmod +x "$TEMP_DIR/docker-compose" || { log_error "Failed to set execute permissions for Docker Compose."; exit 1; }
+
+echo "Moving Docker Compose to final destination..."
+mv "$TEMP_DIR/docker-compose" /usr/local/bin/docker-compose || { log_error "Failed to move Docker Compose to final destination."; exit 1; }
 
 echo "Creating symbolic link for Docker Compose..."
 ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose || { log_error "Failed to create symbolic link for Docker Compose."; exit 1; }
