@@ -24,10 +24,8 @@ if grep -q "edge" /etc/alpine-release; then
   ALPINE_VERSION="edge"
 elif grep -q "v" /etc/alpine-release; then
   ALPINE_VERSION=$(cat /etc/alpine-release | cut -d'.' -f1,2)
-  ALPINE_VERSION="v${ALPINE_VERSION}"
 elif grep -q "[0-9]" /etc/alpine-release; then # 兼容没有 "v" 的数字版本号
-  ALPINE_VERSION=$(cat /etc/alpine-release | cut -d'.' -f1,2)
-  ALPINE_VERSION="v${ALPINE_VERSION}"
+  ALPINE_VERSION="v$(cat /etc/alpine-release | cut -d'.' -f1,2)"
 else
   log_error "Could not determine Alpine version. /etc/alpine-release format is unexpected."
   exit 1
@@ -41,14 +39,18 @@ if [ ! -f /etc/apk/repositories ]; then
   touch /etc/apk/repositories || { log_error "Failed to create /etc/apk/repositories"; exit 1; }
 fi
 
-# 添加 community 仓库，并处理重复添加的情况
+# 添加 main 和 community 仓库，并处理重复添加的情况
+if ! grep -q "http://dl-cdn.alpinelinux.org/alpine/${ALPINE_VERSION}/main" /etc/apk/repositories; then
+  echo "Adding main repository for Alpine ${ALPINE_VERSION}..."
+  echo "http://dl-cdn.alpinelinux.org/alpine/${ALPINE_VERSION}/main" >> /etc/apk/repositories || { log_error "Failed to add main repository"; exit 1; }
+fi
+
 if ! grep -q "http://dl-cdn.alpinelinux.org/alpine/${ALPINE_VERSION}/community" /etc/apk/repositories; then
   echo "Adding community repository for Alpine ${ALPINE_VERSION}..."
   echo "http://dl-cdn.alpinelinux.org/alpine/${ALPINE_VERSION}/community" >> /etc/apk/repositories || { log_error "Failed to add community repository"; exit 1; }
-  apk update || { log_error "Failed to update apk after adding repository"; exit 1; }
-else
-  echo "Community repository already exists."
 fi
+
+apk update || { log_error "Failed to update apk after adding repositories"; exit 1; }
 
 echo "Installing dependencies..."
 apk add --no-cache \
