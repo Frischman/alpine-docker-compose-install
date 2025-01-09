@@ -9,6 +9,9 @@ log_error() {
 cleanup() {
   echo "Cleaning up temporary files..."
   rm -rf "$TEMP_DIR"
+  if [ -f /etc/apk/repositories.bak ]; then
+    mv /etc/apk/repositories.bak /etc/apk/repositories
+  fi
 }
 
 trap cleanup EXIT
@@ -33,16 +36,16 @@ fi
 
 echo "Detected Alpine version: ${ALPINE_VERSION}"
 
-# 添加 main 和 community 仓库，并处理重复添加的情况
-if ! grep -q "http://dl-cdn.alpinelinux.org/alpine/${ALPINE_VERSION}/main" /etc/apk/repositories; then
-  echo "Adding main repository for Alpine ${ALPINE_VERSION}..."
-  echo "http://dl-cdn.alpinelinux.org/alpine/${ALPINE_VERSION}/main" >> /etc/apk/repositories || { log_error "Failed to add main repository"; exit 1; }
+# 备份 /etc/apk/repositories 文件
+if [ -f /etc/apk/repositories ]; then
+  echo "Backing up existing /etc/apk/repositories file..."
+  cp /etc/apk/repositories /etc/apk/repositories.bak || { log_error "Failed to backup /etc/apk/repositories"; exit 1; }
 fi
 
-if ! grep -q "http://dl-cdn.alpinelinux.org/alpine/${ALPINE_VERSION}/community" /etc/apk/repositories; then
-  echo "Adding community repository for Alpine ${ALPINE_VERSION}..."
-  echo "http://dl-cdn.alpinelinux.org/alpine/${ALPINE_VERSION}/community" >> /etc/apk/repositories || { log_error "Failed to add community repository"; exit 1; }
-fi
+# 创建 /etc/apk/repositories 文件并添加 main 和 community 仓库
+echo "Creating /etc/apk/repositories file..."
+echo "http://dl-cdn.alpinelinux.org/alpine/${ALPINE_VERSION}/main" > /etc/apk/repositories || { log_error "Failed to add main repository"; exit 1; }
+echo "http://dl-cdn.alpinelinux.org/alpine/${ALPINE_VERSION}/community" >> /etc/apk/repositories || { log_error "Failed to add community repository"; exit 1; }
 
 apk update || { log_error "Failed to update apk after adding repositories"; exit 1; }
 
@@ -103,5 +106,10 @@ ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose || { log_error "Fail
 echo "Verifying installation..."
 docker version || log_error "Failed to verify Docker installation."
 docker-compose version || log_error "Failed to verify Docker Compose installation."
+
+# 清理备份文件
+if [ -f /etc/apk/repositories.bak ]; then
+  rm /etc/apk/repositories.bak
+fi
 
 echo "Docker and Docker Compose installed successfully on Alpine ${ALPINE_VERSION}!"
