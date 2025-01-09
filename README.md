@@ -19,4 +19,4 @@ chmod +x install_docker_compose.sh
 
 5.删除
 
-rm -rf docker_install_tmp
+cd && rm -rf docker_install_tmp
