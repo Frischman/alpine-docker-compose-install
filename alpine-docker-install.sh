@@ -24,8 +24,10 @@ if grep -q "edge" /etc/alpine-release; then
   ALPINE_VERSION="edge"
 elif grep -q "v" /etc/alpine-release; then
   ALPINE_VERSION=$(cat /etc/alpine-release | cut -d'.' -f1,2)
+  ALPINE_VERSION="v${ALPINE_VERSION}"
 elif grep -q "[0-9]" /etc/alpine-release; then # 兼容没有 "v" 的数字版本号
-  ALPINE_VERSION="v$(cat /etc/alpine-release | cut -d'.' -f1,2)"
+  ALPINE_VERSION=$(cat /etc/alpine-release | cut -d'.' -f1,2)
+  ALPINE_VERSION="v${ALPINE_VERSION}"
 else
   log_error "Could not determine Alpine version. /etc/alpine-release format is unexpected."
   exit 1
